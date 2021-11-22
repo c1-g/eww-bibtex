@@ -5,6 +5,17 @@
 (require 'esxml)
 (require 'eww)
 
+
+(defcustom eww-bibtex-default-bibliography bibtex-files
+  "List of BibTeX files that `eww-bibtex' will append new entry to.
+
+Each element can be an absolute file names or a directory.
+
+The `eww-bibtex' command will have user select only one element from
+this list. If an element is a directory, the command will have user
+select all BibTeX files in it.")
+
+
 (defun eww-bibtex-update-selector-alist ()
   (dolist (elt eww-bibtex-selector-alist)
     ;; Entry commands
@@ -34,8 +45,8 @@
                "[itemprop=author]"
                  ".author"))
     ("title" #'(lambda nil (plist-get eww-data :title)))
-    ("url" (eww-current-url
-            "meta[name=citation_fulltext_html_url]"))
+    ("url\\|howpublished" (eww-current-url
+                           "meta[name=citation_fulltext_html_url]"))
     ("year" ("meta[name=citation_publication_date]"
              "[itemprop=dateModified]"
              "[itemprop=datePublished]"
@@ -45,7 +56,7 @@
              "time[pubdate]"
              ".post_date"
              "time"))
-    ("note" #'(lambda nil (format "[Online; accessed %s" (format-time-string "%F %r")))))
+    ("note" #'(lambda nil (format "[Online; accessed %s]" (format-time-string "%F %r")))))
   ""
   :type 'alist
   :set (lambda (sym val)
@@ -58,16 +69,13 @@
   (interactive nil eww-mode)
   (let ((entry-alist
          (cl-loop
-          with fields = (assoc "Misc"
-                               (buffer-local-value
-                                'bibtex-entry-alist
-                                (find-file-noselect "/storage/bib/web.bib")))
+          with fields = (assoc "Misc" bibtex-BibTeX-entry-alist)
           for elt in fields
           if (listp elt)
           collect
           (cl-loop
            for field in elt
-           if (assoc (car field) eww-bibtex-selector-alist)
+           if (assoc (car field) eww-bibtex-selector-alist #'string-match-p)
            collect
            (if (null (cdr field))
                (append field (list nil (funcall (intern (format "eww-bibtex-get-%s" (car field))))))
@@ -75,10 +83,19 @@
            else
            collect field)
           else
-          collect elt)))
-    (switch-to-buffer (find-buffer-visiting "/storage/bib/web.bib"))
+          collect elt))
+        
+        (target-files (car (cl-loop
+                            for file in eww-bibtex-default-bibliography
+                            if (file-directory-p file)
+                            collect (directory-files-recursively file ".bib")
+                            else
+                            collect file))))
+    
+    (switch-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
+    
     (let ((bibtex-entry-alist (list entry-alist)))
-      (bibtex-entry "Online"))))
+      (bibtex-entry "Misc"))))
 
 (defun eww-bibtex-query (field &optional interactive)
   (interactive

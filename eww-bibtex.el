@@ -43,10 +43,10 @@ select all BibTeX files in it.")
                "[rel=author]"
                "[itemprop=author] > *"
                "[itemprop=author]"
-                 ".author"))
-    ("title" #'(lambda nil (plist-get eww-data :title)))
-    ("url\\|howpublished" (eww-current-url
-                           "meta[name=citation_fulltext_html_url]"))
+               ".author"))
+    ("title" (lambda nil (plist-get eww-data :title)))
+    ("url" (eww-current-url
+            "meta[name=citation_fulltext_html_url]"))
     ("year" ("meta[name=citation_publication_date]"
              "[itemprop=dateModified]"
              "[itemprop=datePublished]"
@@ -55,8 +55,9 @@ select all BibTeX files in it.")
              "[id*=updated]"
              "time[pubdate]"
              ".post_date"
-             "time"))
-    ("note" #'(lambda nil (format "[Online; accessed %s]" (format-time-string "%F")))))
+             "time"
+             (lambda nil (format-time-string "%Y"))))
+    ("note" (lambda nil (format "[Online; accessed %s]" (format-time-string "%F")))))
   ""
   :type 'alist
   :set (lambda (sym val)
@@ -101,7 +102,9 @@ select all BibTeX files in it.")
   (interactive
    (list (completing-read "Which field?" (mapcar #'car eww-bibtex-selector-alist))
          t))
-  (when-let* ((selectors (cadr (assoc field eww-bibtex-selector-alist)))
+  (when-let* ((selectors (if (eq (caadr (assoc field eww-bibtex-selector-alist)) 'lambda)
+                             (list (cadr (assoc field eww-bibtex-selector-alist)))
+                           (cadr (assoc field eww-bibtex-selector-alist))))
               (eww-source (plist-get eww-data :source))
               (eww-dom (with-temp-buffer
                          (insert eww-source)
@@ -110,9 +113,10 @@ select all BibTeX files in it.")
                            #'stringp
                            (flatten-tree
                             (mapcar #'(lambda (selector)
-                                        (if (symbolp selector)
-                                            (funcall selector)
-                                          (esxml-query-all selector eww-dom)))
+                                        (cond ((stringp selector)
+                                               (esxml-query-all selector eww-dom))
+                                              (t
+                                               (funcall selector))))
                                     selectors)))))
     (if (and interactive (> (length value-list) 1))
         (completing-read (format "Which %s?" field) value-list)

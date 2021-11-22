@@ -36,7 +36,7 @@
     ("title" #'(lambda nil (plist-get eww-data :title)))
     ("url" (eww-current-url
             "meta[name=citation_fulltext_html_url]"))
-    ("date" ("meta[name=citation_publication_date]"
+    ("year" ("meta[name=citation_publication_date]"
              "[itemprop=dateModified]"
              "[itemprop=datePublished]"
              "[itemprop=dateModified]"
@@ -45,8 +45,7 @@
              "time[pubdate]"
              ".post_date"
              "time"))
-    ("urldate" #'(lambda nil (format-time-string "%F %r")))
-    ("note" ("meta[name=description]")))
+    ("note" #'(lambda nil (format "[Online; accessed %s" (format-time-string "%F %r")))))
   ""
   :type 'alist
   :set (lambda (sym val)
@@ -59,7 +58,7 @@
   (interactive nil eww-mode)
   (let ((entry-alist
          (cl-loop
-          with fields = (assoc "Online"
+          with fields = (assoc "Misc"
                                (buffer-local-value
                                 'bibtex-entry-alist
                                 (find-file-noselect "/storage/bib/web.bib")))

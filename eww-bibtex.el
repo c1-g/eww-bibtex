@@ -56,7 +56,7 @@ select all BibTeX files in it.")
              "time[pubdate]"
              ".post_date"
              "time"))
-    ("note" #'(lambda nil (format "[Online; accessed %s]" (format-time-string "%F %r")))))
+    ("note" #'(lambda nil (format "[Online; accessed %s]" (format-time-string "%F")))))
   ""
   :type 'alist
   :set (lambda (sym val)

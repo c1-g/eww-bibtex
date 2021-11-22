@@ -3,6 +3,7 @@
 ;;; Code:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'esxml)
+(require 'eww)
 
 (defun eww-bibtex-update-selector-alist ()
   (dolist (elt eww-bibtex-selector-alist)
@@ -55,7 +56,7 @@
 ;;; TODO documentation needed!
 
 (defun eww-bibtex ()
-  (interactive)
+  (interactive nil eww-mode)
   (let ((entry-alist
          (cl-loop
           with fields = (assoc "Online"

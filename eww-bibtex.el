@@ -4,7 +4,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (require 'esxml)
 (require 'eww)
-
+(require 'dash)
 
 (defcustom eww-bibtex-default-bibliography bibtex-files
   "List of BibTeX files that `eww-bibtex' will append new entry to.
@@ -68,31 +68,30 @@ select all BibTeX files in it.")
 
 (defun eww-bibtex ()
   (interactive nil eww-mode)
-  (let ((entry-alist
-         (cl-loop
-          with entries = (assoc "Misc" bibtex-BibTeX-entry-alist)
-          for each entry in entries
-          if (listp entry)
-          collect
-          (cl-loop
-           for field in entry
-           if (assoc (car field) eww-bibtex-selector-alist)
-           collect
-           (if (null (cdr field))
-               (list field nil (funcall (intern (format "eww-bibtex-get-%s" (car field)))))
-             (-replace-at 2 (funcall (intern (format "eww-bibtex-get-%s" (car field)))) field))
-           else
-           collect entry)
-          else
-          collect entry))
-        
-        (target-files (car (cl-loop
-                            for file in eww-bibtex-default-bibliography
-                            if (file-directory-p file)
-                            collect (directory-files-recursively file ".bib")
-                            else
-                            collect file))))
+  (let* ((entry-alist (assoc "Misc" bibtex-BibTeX-entry-alist))
+         (fields-list (cl-fifth entry-alist))
+         (new-fields-list)
+         (target-files (car (cl-loop
+                             for file in eww-bibtex-default-bibliography
+                             if (file-directory-p file)
+                             collect (directory-files-recursively file ".bib")
+                             else
+                             collect file))))
+    (setq new-fields-list (cl-loop
+                           for elt in eww-bibtex-selector-alist
+                           if (assoc (car elt) fields-list)
+                           collect
+                           (-replace-at 2 (intern (format "eww-bibtex-get-%s" (car elt)))
+                                        (if (null (cdr (assoc (car elt) fields-list)))
+                                            (append (assoc (car elt) fields-list)
+                                                    (list nil nil))
+                                          (assoc (car elt) fields-list)))
+                           else
+                           collect
+                           (list (car elt) nil (intern (format "eww-bibtex-get-%s" (car elt))))))
 
+    (setq entry-alist (-replace-at 4 new-fields-list entry-alist))
+    
     (switch-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
     
     (let ((bibtex-entry-alist (list entry-alist)))

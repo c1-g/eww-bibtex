@@ -15,26 +15,31 @@ The `eww-bibtex' command will have user select only one element from
 this list. If an element is a directory, the command will have user
 select all BibTeX files in it.")
 
+(defcustom eww-bibtex-find-ref-key-functions
+  (list #'eww-bibtex-find-key-for-wikipedia)
+  ""
+  :type 'hook)
 
 (defun eww-bibtex-update-selector-alist ()
   (dolist (elt eww-bibtex-selector-alist)
     ;; Entry commands
-    (let* ((field (car elt))
-           (fname (intern (format "eww-bibtex-get-%s" field))))
-      (cond ((or (symbolp (cdr elt))
-                 (symbolp (cadr elt)))
+    (let* ((field-name (car elt))
+           (field (cadr elt))
+           (fname (intern (format "eww-bibtex-get-%s" field-name))))
+      (cond ((symbolp field)
              (defalias fname
-               (symbol-function (cadr elt))))
-            ((eq 'function (caadr elt))
+               (symbol-function field)))
+            ((or (eq 'lambda (car field))
+                 (eq 'function (car field)))
              (defalias fname
-               (cadadr elt)
+               field
                "Alias for an anonymous function defined by `eww-bibtex-selector-alist'"))
             (t (defalias fname
                  (lambda ()
                    (:documentation
                     "Automatically defined by `eww-bibtex-update-selector-alist'.")
                    (interactive)
-                   (eww-bibtex-query field t))))))))
+                   (eww-bibtex-query field-name t))))))))
 
 (defcustom eww-bibtex-selector-alist
   '(("author" ("meta[name=author]"
@@ -44,7 +49,7 @@ select all BibTeX files in it.")
                "[itemprop=author] > *"
                "[itemprop=author]"
                ".author"))
-    ("title" #'(lambda nil (plist-get eww-data :title)))
+    ("title" (lambda nil (plist-get eww-data :title)))
     ("url" ("link[rel=canonical]"
             eww-current-url
             "meta[name=citation_fulltext_html_url]"))
@@ -57,13 +62,18 @@ select all BibTeX files in it.")
              "time[pubdate]"
              ".post_date"
              "time"
-             #'(lambda nil (format-time-string "%Y"))))
-    ("note" #'(lambda nil (format "[Online; accessed %s]" (format-time-string "%F")))))
+             (lambda nil (format-time-string "%Y"))))
+    ("note" (lambda nil (format "[Online; accessed %s]" (format-time-string "%F")))))
   ""
   :type 'alist
   :set (lambda (sym val)
          (set-default sym val)
          (eww-bibtex-update-selector-alist)))
+
+(defun eww-bibtex-find-key-for-wikipedia (fields)
+  (let ((url (car (last (assoc "url" fields)))))
+    (if (string-match-p "wikipedia" url)
+        (concat "wiki:" (file-name-base url)))))
 
 ;;; TODO documentation needed!
 
@@ -93,10 +103,16 @@ select all BibTeX files in it.")
 
     (setq entry-alist (-replace-at 4 new-fields-list entry-alist))
     
-    (switch-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
+    (pop-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
     
-    (let ((bibtex-entry-alist (list entry-alist)))
-      (bibtex-entry "Misc"))))
+    (let ((bibtex-entry-alist (list entry-alist))
+          (bibtex-autokey-before-presentation-function (apply-partially #'eww-replace-autokey new-fields-list)))
+      (bibtex-entry "Misc")
+      (bibtex-clean-entry))))
+
+(defun eww-replace-autokey (fields-list autokey)
+  (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions fields-list)
+      autokey))
 
 (defun eww-bibtex-query (field &optional interactive)
   (interactive
@@ -120,7 +136,9 @@ select all BibTeX files in it.")
                                     selectors)))))
     (if (and interactive (> (length value-list) 1))
         (completing-read (format "Which %s?" field) value-list)
-      (car value-list))))
+      (if interactive
+          (message (car value-list))
+        (car value-list)))))
 
 (provide 'eww-bibtex)
 ;;; eww-bibtex.el ends here

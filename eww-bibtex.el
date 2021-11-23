@@ -79,7 +79,7 @@ select all BibTeX files in it.")
            if (assoc (car field) eww-bibtex-selector-alist)
            collect
            (if (null (cdr field))
-               (append field (list nil (funcall (intern (format "eww-bibtex-get-%s" (car field))))))
+               (list field nil (funcall (intern (format "eww-bibtex-get-%s" (car field)))))
              (-replace-at 2 (funcall (intern (format "eww-bibtex-get-%s" (car field)))) field))
            else
            collect entry)

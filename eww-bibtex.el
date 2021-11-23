@@ -76,7 +76,7 @@ select all BibTeX files in it.")
           collect
           (cl-loop
            for field in entry
-           if (assoc (car field) eww-bibtex-selector-alist #'string-match-p)
+           if (assoc (car field) eww-bibtex-selector-alist)
            collect
            (if (null (cdr field))
                (append field (list nil (funcall (intern (format "eww-bibtex-get-%s" (car field))))))

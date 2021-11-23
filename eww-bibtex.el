@@ -15,8 +15,9 @@ The `eww-bibtex' command will have user select only one element from
 this list. If an element is a directory, the command will have user
 select all BibTeX files in it.")
 
-(defcustom eww-bibtex-finalize-functions
-  (list #'identity)
+(defcustom eww-bibtex-finalize-field-list-functions
+  (list #'eww-bibtex-find-author-for-wikipedia
+        #'identity)
   "")
 
 (defcustom eww-bibtex-find-ref-key-functions
@@ -79,6 +80,11 @@ select all BibTeX files in it.")
     (if (string-match-p "wikipedia" url)
         (concat "wiki:" (file-name-base url)))))
 
+(defun eww-bibtex-find-author-for-wikipedia (fields)
+  (when-let ((url (car (last (assoc "url" fields)))))
+    (if (string-match-p "wikipedia" url)
+        (-replace '("author" nil nil) '("author" nil "{Wikipedia Contributors}") fields))))
+
 ;;; TODO documentation needed!
 
 (defun eww-bibtex ()
@@ -93,20 +99,22 @@ select all BibTeX files in it.")
                              else
                              collect file))))
     (setq new-field-list (cl-loop
-                           for elt in-ref eww-bibtex-field-alist
-                           collect
-                           (let* ((field-name (car elt))
-                                  (get-field-fn (intern (format "eww-bibtex-get-%s" field-name)))
-                                  (field (assoc field-name field-list)))
-                             (if field
-                                 (-replace-at 2 (funcall get-field-fn)
-                                              (if (null (cdr field))
-                                                  (append field '(nil nil))
-                                                field))
-                               (list field-name nil (funcall get-field-fn))))))
+                          for elt in-ref eww-bibtex-field-alist
+                          collect
+                          (let* ((field-name (car elt))
+                                 (get-field-fn (intern (format "eww-bibtex-get-%s" field-name)))
+                                 (field (assoc field-name field-list)))
+                            (if field
+                                (-replace-at 2 (funcall get-field-fn)
+                                             (if (null (cdr field))
+                                                 (append field '(nil nil))
+                                               field))
+                              (list field-name nil (funcall get-field-fn))))))
 
-    (setq misc-entry (-replace-at 4 new-field-list misc-entry))
-    (setq misc-entry (run-hook-with-args-until-success 'eww-bibtex-finalize-functions misc-entry))
+    (setq misc-entry (-replace-at
+                      4
+                      (run-hook-with-args-until-success 'eww-bibtex-finalize-functions new-field-list)
+                      misc-entry))
     
     (pop-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
     

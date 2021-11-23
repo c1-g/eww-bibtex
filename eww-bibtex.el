@@ -83,8 +83,8 @@ select all BibTeX files in it.")
 
 (defun eww-bibtex ()
   (interactive nil eww-mode)
-  (let* ((entry-alist (assoc "Misc" bibtex-BibTeX-entry-alist))
-         (field-list (cl-fifth entry-alist))
+  (let* ((misc-entry (assoc "Misc" bibtex-BibTeX-entry-alist))
+         (field-list (cl-fifth misc-entry))
          (new-field-list)
          (target-files (car (cl-loop
                              for file in eww-bibtex-default-bibliography
@@ -105,12 +105,12 @@ select all BibTeX files in it.")
                                                 field))
                                (list field-name nil (funcall get-field-fn))))))
 
-    (setq entry-alist (-replace-at 4 new-field-list entry-alist))
-    (setq entry-alist (run-hook-with-args-until-success 'eww-bibtex-finalize-functions entry-alist))
+    (setq misc-entry (-replace-at 4 new-field-list misc-entry))
+    (setq misc-entry (run-hook-with-args-until-success 'eww-bibtex-finalize-functions misc-entry))
     
     (pop-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
     
-    (let ((bibtex-entry-alist (list entry-alist))
+    (let ((bibtex-entry-alist (list misc-entry))
           (bibtex-autokey-before-presentation-function (apply-partially #'eww-bibtex-replace-autokey new-field-list)))
       (bibtex-entry "Misc")
       (bibtex-clean-entry))))

@@ -70,21 +70,21 @@ select all BibTeX files in it.")
   (interactive nil eww-mode)
   (let ((entry-alist
          (cl-loop
-          with fields = (assoc "Misc" bibtex-BibTeX-entry-alist)
-          for elt in fields
-          if (listp elt)
+          with entries = (assoc "Misc" bibtex-BibTeX-entry-alist)
+          for each entry in entries
+          if (listp entry)
           collect
           (cl-loop
-           for field in elt
+           for field in entry
            if (assoc (car field) eww-bibtex-selector-alist #'string-match-p)
            collect
            (if (null (cdr field))
                (append field (list nil (funcall (intern (format "eww-bibtex-get-%s" (car field))))))
              (-replace-at 2 (funcall (intern (format "eww-bibtex-get-%s" (car field)))) field))
            else
-           collect field)
+           collect entry)
           else
-          collect elt))
+          collect entry))
         
         (target-files (car (cl-loop
                             for file in eww-bibtex-default-bibliography
@@ -92,7 +92,7 @@ select all BibTeX files in it.")
                             collect (directory-files-recursively file ".bib")
                             else
                             collect file))))
-    
+
     (switch-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
     
     (let ((bibtex-entry-alist (list entry-alist)))

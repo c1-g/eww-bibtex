@@ -15,6 +15,10 @@ The `eww-bibtex' command will have user select only one element from
 this list. If an element is a directory, the command will have user
 select all BibTeX files in it.")
 
+(defcustom eww-bibtex-finalize-functions
+  (list #'identity)
+  "")
+
 (defcustom eww-bibtex-find-ref-key-functions
   (list #'eww-bibtex-find-key-for-wikipedia)
   ""
@@ -102,6 +106,7 @@ select all BibTeX files in it.")
                                (list field-name nil (funcall get-field-fn))))))
 
     (setq entry-alist (-replace-at 4 new-fields-list entry-alist))
+    (setq entry-alist (run-hook-with-args-until-success 'eww-bibtex-finalize-functions entry-alist))
     
     (pop-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
     

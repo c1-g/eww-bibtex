@@ -78,17 +78,17 @@ select all BibTeX files in it.")
                              else
                              collect file))))
     (setq new-fields-list (cl-loop
-                           for elt in eww-bibtex-selector-alist
-                           if (assoc (car elt) fields-list)
+                           for elt in-ref eww-bibtex-selector-alist
                            collect
-                           (-replace-at 2 (intern (format "eww-bibtex-get-%s" (car elt)))
-                                        (if (null (cdr (assoc (car elt) fields-list)))
-                                            (append (assoc (car elt) fields-list)
-                                                    (list nil nil))
-                                          (assoc (car elt) fields-list)))
-                           else
-                           collect
-                           (list (car elt) nil (intern (format "eww-bibtex-get-%s" (car elt))))))
+                           (let* ((field-name (car elt))
+                                  (get-field-fn (intern (format "eww-bibtex-get-%s" field-name)))
+                                  (field (assoc field-name fields-list)))
+                             (if field
+                                 (-replace-at 2 (funcall get-field-fn)
+                                              (if (null (cdr field))
+                                                  (append field '(nil nil))
+                                                field))
+                               (list field-name nil (funcall get-field-fn))))))
 
     (setq entry-alist (-replace-at 4 new-fields-list entry-alist))
     

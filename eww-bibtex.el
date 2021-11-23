@@ -20,8 +20,8 @@ select all BibTeX files in it.")
   ""
   :type 'hook)
 
-(defun eww-bibtex-update-selector-alist ()
-  (dolist (elt eww-bibtex-selector-alist)
+(defun eww-bibtex-update-field-alist ()
+  (dolist (elt eww-bibtex-field-alist)
     ;; Entry commands
     (let* ((field-name (car elt))
            (field (cadr elt))
@@ -33,15 +33,15 @@ select all BibTeX files in it.")
                  (eq 'function (car field)))
              (defalias fname
                field
-               "Alias for an anonymous function defined by `eww-bibtex-selector-alist'"))
+               "Alias for an anonymous function defined by `eww-bibtex-field-alist'"))
             (t (defalias fname
                  (lambda ()
                    (:documentation
-                    "Automatically defined by `eww-bibtex-update-selector-alist'.")
+                    "Automatically defined by `eww-bibtex-update-field-alist'.")
                    (interactive)
                    (eww-bibtex-query field-name t))))))))
 
-(defcustom eww-bibtex-selector-alist
+(defcustom eww-bibtex-field-alist
   '(("author" ("meta[name=author]"
                "meta[name=citation_author]"
                "[rel=author] > [itemprop=name]"
@@ -68,7 +68,7 @@ select all BibTeX files in it.")
   :type 'alist
   :set (lambda (sym val)
          (set-default sym val)
-         (eww-bibtex-update-selector-alist)))
+         (eww-bibtex-update-field-alist)))
 
 (defun eww-bibtex-find-key-for-wikipedia (fields)
   (let ((url (car (last (assoc "url" fields)))))
@@ -89,7 +89,7 @@ select all BibTeX files in it.")
                              else
                              collect file))))
     (setq new-fields-list (cl-loop
-                           for elt in-ref eww-bibtex-selector-alist
+                           for elt in-ref eww-bibtex-field-alist
                            collect
                            (let* ((field-name (car elt))
                                   (get-field-fn (intern (format "eww-bibtex-get-%s" field-name)))
@@ -116,11 +116,11 @@ select all BibTeX files in it.")
 
 (defun eww-bibtex-query (field &optional interactive)
   (interactive
-   (list (completing-read "Which field?" (mapcar #'car eww-bibtex-selector-alist))
+   (list (completing-read "Which field?" (mapcar #'car eww-bibtex-field-alist))
          t))
-  (when-let* ((selectors (if (eq (caadr (assoc field eww-bibtex-selector-alist)) 'lambda)
-                             (list (cadr (assoc field eww-bibtex-selector-alist)))
-                           (cadr (assoc field eww-bibtex-selector-alist))))
+  (when-let* ((selectors (if (eq (caadr (assoc field eww-bibtex-field-alist)) 'lambda)
+                             (list (cadr (assoc field eww-bibtex-field-alist)))
+                           (cadr (assoc field eww-bibtex-field-alist))))
               (eww-source (plist-get eww-data :source))
               (eww-dom (with-temp-buffer
                          (insert eww-source)

@@ -84,20 +84,20 @@ select all BibTeX files in it.")
 (defun eww-bibtex ()
   (interactive nil eww-mode)
   (let* ((entry-alist (assoc "Misc" bibtex-BibTeX-entry-alist))
-         (fields-list (cl-fifth entry-alist))
-         (new-fields-list)
+         (field-list (cl-fifth entry-alist))
+         (new-field-list)
          (target-files (car (cl-loop
                              for file in eww-bibtex-default-bibliography
                              if (file-directory-p file)
                              collect (directory-files-recursively file ".bib")
                              else
                              collect file))))
-    (setq new-fields-list (cl-loop
+    (setq new-field-list (cl-loop
                            for elt in-ref eww-bibtex-field-alist
                            collect
                            (let* ((field-name (car elt))
                                   (get-field-fn (intern (format "eww-bibtex-get-%s" field-name)))
-                                  (field (assoc field-name fields-list)))
+                                  (field (assoc field-name field-list)))
                              (if field
                                  (-replace-at 2 (funcall get-field-fn)
                                               (if (null (cdr field))
@@ -105,18 +105,18 @@ select all BibTeX files in it.")
                                                 field))
                                (list field-name nil (funcall get-field-fn))))))
 
-    (setq entry-alist (-replace-at 4 new-fields-list entry-alist))
+    (setq entry-alist (-replace-at 4 new-field-list entry-alist))
     (setq entry-alist (run-hook-with-args-until-success 'eww-bibtex-finalize-functions entry-alist))
     
     (pop-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
     
     (let ((bibtex-entry-alist (list entry-alist))
-          (bibtex-autokey-before-presentation-function (apply-partially #'eww-bibtex-replace-autokey new-fields-list)))
+          (bibtex-autokey-before-presentation-function (apply-partially #'eww-bibtex-replace-autokey new-field-list)))
       (bibtex-entry "Misc")
       (bibtex-clean-entry))))
 
-(defun eww-bibtex-replace-autokey (fields-list autokey)
-  (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions fields-list)
+(defun eww-bibtex-replace-autokey (field-list autokey)
+  (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions field-list)
       autokey))
 
 (defun eww-bibtex--query (field &optional interactive)

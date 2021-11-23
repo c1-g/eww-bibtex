@@ -39,7 +39,7 @@ select all BibTeX files in it.")
                    (:documentation
                     "Automatically defined by `eww-bibtex-update-field-alist'.")
                    (interactive)
-                   (eww-bibtex-query field-name t))))))))
+                   (eww-bibtex--query field-name t))))))))
 
 (defcustom eww-bibtex-field-alist
   '(("author" ("meta[name=author]"
@@ -114,7 +114,7 @@ select all BibTeX files in it.")
   (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions fields-list)
       autokey))
 
-(defun eww-bibtex-query (field &optional interactive)
+(defun eww-bibtex--query (field &optional interactive)
   (interactive
    (list (completing-read "Which field?" (mapcar #'car eww-bibtex-field-alist))
          t))
@@ -135,7 +135,7 @@ select all BibTeX files in it.")
                                                (funcall selector))))
                                     selectors)))))
     (if (and interactive (> (length value-list) 1))
-        (completing-read (format "Which %s?" field) value-list)
+         (completing-read (format "Which %s?" field) value-list)
       (if interactive
           (message (car value-list))
         (car value-list)))))

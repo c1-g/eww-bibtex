@@ -114,7 +114,7 @@ select all BibTeX files in it.")
 
     (setq misc-entry (-replace-at
                       4
-                      (run-hook-with-args-until-success 'eww-bibtex-finalize-functions new-field-list)
+                      (run-hook-with-args-until-success 'eww-bibtex-finalize-field-list-functions new-field-list)
                       misc-entry))
     
     (pop-to-buffer (find-file-noselect (completing-read "Which BibTeX file? " target-files nil t)))
@@ -122,7 +122,8 @@ select all BibTeX files in it.")
     (let ((bibtex-entry-alist (list misc-entry))
           (bibtex-autokey-before-presentation-function (apply-partially #'eww-bibtex-replace-autokey new-field-list)))
       (bibtex-entry "Misc")
-      (bibtex-clean-entry))))
+      (when (yes-or-no-p "Is the entry correct? ")
+        (bibtex-clean-entry)))))
 
 (defun eww-bibtex-replace-autokey (field-list autokey)
   (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions field-list)

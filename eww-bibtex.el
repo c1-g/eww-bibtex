@@ -47,28 +47,28 @@ select all BibTeX files in it.")
                    (eww-bibtex--query field-name t))))))))
 
 (defcustom eww-bibtex-field-alist
-  '(("author" ("meta[name=author]"
-               "meta[name=citation_author]"
-               "[rel=author] > [itemprop=name]"
-               "[rel=author]"
-               "[itemprop=author] > *"
-               "[itemprop=author]"
-               ".author"))
-    ("title" (lambda nil (plist-get eww-data :title)))
-    ("url" ("link[rel=canonical]"
-            eww-current-url
-            "meta[name=citation_fulltext_html_url]"))
-    ("year" ("meta[name=citation_publication_date]"
-             "[itemprop=dateModified]"
-             "[itemprop=datePublished]"
-             "[itemprop=dateModified]"
-             "[itemprop=datePublished]"
-             "[id*=updated]"
-             "time[pubdate]"
-             ".post_date"
-             "time"
-             (lambda nil (format-time-string "%Y"))))
-    ("note" (lambda nil (format "[Online; accessed %s]" (format-time-string "%F")))))
+  '(("author" . ("meta[name=author]"
+                 "meta[name=citation_author]"
+                 "[rel=author] > [itemprop=name]"
+                 "[rel=author]"
+                 "[itemprop=author] > *"
+                 "[itemprop=author]"
+                 ".author"))
+    ("title" . (lambda nil (plist-get eww-data :title)))
+    ("url" . ("link[rel=canonical]"
+              eww-current-url
+              "meta[name=citation_fulltext_html_url]"))
+    ("year" . ("meta[name=citation_publication_date]"
+               "[itemprop=dateModified]"
+               "[itemprop=datePublished]"
+               "[itemprop=dateModified]"
+               "[itemprop=datePublished]"
+               "[id*=updated]"
+               "time[pubdate]"
+               ".post_date"
+               "time"
+               (lambda nil (format-time-string "%Y"))))
+    ("note" . (lambda nil (format "[Online; accessed %s]" (format-time-string "%F")))))
   ""
   :type 'alist
   :set (lambda (sym val)

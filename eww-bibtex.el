@@ -29,7 +29,7 @@ select all BibTeX files in it.")
   (dolist (elt eww-bibtex-field-alist)
     ;; Entry commands
     (let* ((field-name (car elt))
-           (field (cadr elt))
+           (field (cdr elt))
            (fname (intern (format "eww-bibtex-get-%s" field-name))))
       (cond ((symbolp field)
              (defalias fname
@@ -59,6 +59,7 @@ select all BibTeX files in it.")
               eww-current-url
               "meta[name=citation_fulltext_html_url]"))
     ("year" . ("meta[name=citation_publication_date]"
+               "meta[name=date]"
                "[itemprop=dateModified]"
                "[itemprop=datePublished]"
                "[itemprop=dateModified]"
@@ -131,9 +132,9 @@ select all BibTeX files in it.")
   (interactive
    (list (completing-read "Which field?" (mapcar #'car eww-bibtex-field-alist))
          t))
-  (when-let* ((selectors (if (eq (caadr (assoc field eww-bibtex-field-alist)) 'lambda)
-                             (list (cadr (assoc field eww-bibtex-field-alist)))
-                           (cadr (assoc field eww-bibtex-field-alist))))
+  (when-let* ((selectors (if (eq (cadr (assoc field eww-bibtex-field-alist)) 'lambda)
+                             (list (cdr (assoc field eww-bibtex-field-alist)))
+                           (cdr (assoc field eww-bibtex-field-alist))))
               (eww-source (plist-get eww-data :source))
               (eww-dom (with-temp-buffer
                          (insert eww-source)

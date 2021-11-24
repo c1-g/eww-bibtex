@@ -86,9 +86,40 @@ select all BibTeX files in it.")
     (if (string-match-p "wikipedia" url)
         (-replace '("author" nil nil) '("author" nil "{Wikipedia Contributors}") fields))))
 
-;;; TODO documentation needed!
-
 (defun eww-bibtex ()
+  "Alter the \"Misc\" entry in `bibtex-BibTeX-entry-alist' based on
+`eww-bibtex-field-alist'.
+
+This function works by replacing the initial content of all the fields
+in the \"Misc\" entry defined `eww-bibtex-field-alist'.
+
+For example, here is the default \"Misc\" entry type,
+
+ (\"Misc\" \"Miscellaneous\" nil nil
+  ((\"author\")
+   (\"title\" \"Title of the work (BibTeX converts it to lowercase)\")
+   (\"howpublished\" \"The way in which the work was published\")
+   (\"month\")
+   (\"year\")
+   (\"note\")))
+
+We focus on modifying the field alist which is,
+
+  ((\"author\")
+   (\"title\" \"Title of the work (BibTeX converts it to lowercase)\")
+   (\"howpublished\" \"The way in which the work was published\")
+   (\"month\")
+   (\"year\")
+   (\"note\"))
+
+Each of these elements is in the form of (FIELD COMMENT INIT ALTERNATIVE).
+
+The function will replace or append the INIT argument, which dictates
+the initial content of the field, based on `eww-bibtex-field-alist'.
+
+Take the \"note\" field, then replace its INIT argument with the result
+of `eww-bibtex-get-note' created automatically by
+`eww-bibtex-update-field-alist'."
   (interactive nil eww-mode)
   (let* ((misc-entry (assoc "Misc" bibtex-BibTeX-entry-alist))
          (field-list (cl-fifth misc-entry))

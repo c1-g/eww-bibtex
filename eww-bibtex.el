@@ -7,6 +7,7 @@
 (require 'dash)
 (require 'dom)
 
+;;; Customize variables
 (defcustom eww-bibtex-default-bibliography bibtex-files
   "List of BibTeX files that `eww-bibtex' will append new entry to.
 
@@ -16,53 +17,42 @@ The `eww-bibtex' command will have user select only one element from
 this list. If an element is a directory, the command will have user
 select all BibTeX files in it.")
 
-(defvar eww-bibtex-build-field-list-functions
+(defcustom eww-bibtex-modify-field-list-functions
+  (list
+   #'eww-bibtex-find-author-for-wikipedia)
+  "TODO"
+  :type 'hook)
+
+(defcustom eww-bibtex-find-ref-key-functions
+  (list #'eww-bibtex-find-key-for-wikipedia)
+  "TODO"
+  :type 'hook)
+
+(defvar eww-bibtex--build-field-list-functions
   (list
    #'eww-bibtex-get-author
    #'eww-bibtex-get-title
    #'eww-bibtex-get-year
    #'eww-bibtex-get-url
-   #'eww-bibtex-get-note))
+   #'eww-bibtex-get-note)
+  "Functions for building the field list, should return a list of
+possible initial content (string) for its field.
 
-(defcustom eww-bibtex-modify-field-list-functions
-  (list
-   #'eww-bibtex-find-author-for-wikipedia)
-  ""
-  :type 'hook)
+Each function should take 1 arguments, the DOM for a document given by
+`eww-bibtex'.
 
-(defcustom eww-bibtex-find-ref-key-functions
-  (list #'eww-bibtex-find-key-for-wikipedia)
-  ""
-  :type 'hook)
+For example, `eww-bibtex-get-url' returns all possible values for
+the \"url\" field e.g.
+ (\"https://en.wikipedia.com/John_Doe/\" \"example.com\") etc.
 
-(defun eww-bibtex-build-field-list (field-list dom func-list)
-  (cond ((null func-list) field-list)
-        (t (eww-bibtex-build-field-list
-            (if (string-prefix-p "eww-bibtex-get-" (symbol-name (car func-list)))
-                 (let* ((field-name (string-remove-prefix "eww-bibtex-get-"
-                                                          (symbol-name (car func-list))))
-                        (value-list (-list (funcall (car func-list) field-list dom)))
-                        (value (if (> (length value-list) 1)
-                                   (completing-read (concat "Which " field-name "? ") value-list)
-                                 (car value-list)))
-                        (field-elt (--find (equal (car it) field-name) field-list)))
-                   (if field-elt
-                       (-replace field-elt `(,field-name nil ,value) field-list)
-                     (push `(,field-name nil ,value) field-list))
-                   )
-               (-list (funcall (car func-list) field-list dom)))
-             dom
-            (cdr func-list)))))
+This list will get processed by `eww-bibtex--build-field-list'
+See its documentation or its definition for more.
 
-(defun eww-bibtex-modify-field-list (field-list dom func-list)
-  (cond ((null func-list) field-list)
-        (t (let ((modified-field-list (funcall (car func-list) field-list dom)))
-             (eww-bibtex-modify-field-list
-              (or modified-field-list field-list)
-              dom
-              (cdr func-list))))))
+Note: This list shouldn't be modified unless you want to add another
+field to the \"Misc\" entry like \"file\" or \"editor\", and their
+fuctions should have the namespace of eww-bibtex-get-FIELD_NAME") 
 
-(defun eww-bibtex-get-author (field-list dom)
+(defun eww-bibtex-get-author (dom)
   (eww-bibtex--query dom
                      '("meta[name=author]"
                        "meta[name=citation_author]"
@@ -72,9 +62,9 @@ select all BibTeX files in it.")
                        "[itemprop=author]"
                        ".author")))
 
-(defun eww-bibtex-get-title (field-list dom)
+(defun eww-bibtex-get-title (dom)
   (let ((title (cl-caddr
-                 (car (dom-by-tag dom 'title)))))
+                (car (dom-by-tag dom 'title)))))
     (when title
       (->>
        title
@@ -82,12 +72,12 @@ select all BibTeX files in it.")
        (s-trim)
        (s-collapse-whitespace)))))
 
-(defun eww-bibtex-get-url (field-list dom)
+(defun eww-bibtex-get-url (dom)
   (append (eww-bibtex--query dom '("link[rel=canonical]"
-                                      "meta[name=citation_fulltext_html_url]"))
+                                   "meta[name=citation_fulltext_html_url]"))
           (list (eww-current-url))))
 
-(defun eww-bibtex-get-year (field-list dom)
+(defun eww-bibtex-get-year (dom)
   (append (eww-bibtex--query dom
                              '("meta[name=citation_publication_date]"
                                "meta[name=date]"
@@ -104,6 +94,65 @@ select all BibTeX files in it.")
 (defun eww-bibtex-get-note (field-list _dom)
   (format "[Online; accessed %s]" (format-time-string "%F")))
 
+
+(defun eww-bibtex--build-field-list (field-list dom func-list)
+  "Recursively build field list by pass each function in FUNC-LIST
+the DOM then use its return value to edit the FIELD-LIST.
+
+The FUNC-LIST should be the `eww-bibtex--build-field-list-functions'
+and the DOM should be given by `eww-bibtex'."
+  (cond (;; Check if FUNC-LIST is exhausted, if yes, finally return FIELD-LIST.
+         (null func-list) field-list)
+        
+        ;; Check if the first function in FUNC-LIST doesn't have an "eww-bibtex-get" prefix,
+        ;; if it doesn't, raise error.
+        ((not (string-prefix-p "eww-bibtex-get-" (symbol-name (car func-list))))
+         (error "Function \"%s\" name is not in the format of eww-bibtex-get-FIELD_NAME" (car func-list)))
+
+        ;; Else, do this. VVV
+        (t (eww-bibtex--build-field-list
+
+            (let* ((field-name (string-remove-prefix "eww-bibtex-get-"
+                                                     (symbol-name (car func-list))))
+                   ;; FIELD-NAME is the string after "eww-bibtex-get-"
+                   ;; e.g. FIELD-NAME for "eww-bibtex-get-title" is "title".
+
+                   (value-list (-list (funcall (car func-list) dom)))
+                   ;; VALUE-LIST is what the first function in FUNC-LIST returns.
+                   
+                   
+                   (value (if (> (length value-list) 1)
+                              (completing-read (concat "Which " field-name "? ") value-list)
+                            ;; VALUE is the string from having user select one of the strings inside VALUE-LIST
+                            (car value-list)
+                            ;; If VALUE-LIST have one string, use it without asking user.  
+                            )))
+
+              ;; Is there any field with our FIELD-NAME inside the FIELD-LIST?
+              (if (--find (equal (car it) field-name) field-list)
+                  ;; Yes, there is a field with our FIELD-NAME.
+                  ;; Replace that field's INIT (short for INITial content) with our VALUE.
+                  (-replace field-elt `(,field-name nil ,value) field-list)
+                
+                ;; No, there isn't a field with our FIELD-NAME.
+                ;; Then add a new field called FIELD-NAME with our VALUE
+                ;; to FIELD-LIST.
+                (push `(,field-name nil ,value) field-list)))
+
+            ;; Pass the DOM argument to the next function.
+            dom
+            ;; Do this again for the next function in FUNC-LIST.
+            (cdr func-list)))))
+
+;;; TODO Documentation
+(defun eww-bibtex-modify-field-list (field-list dom func-list)
+  (cond ((null func-list) field-list)
+        (t (let ((modified-field-list (funcall (car func-list) field-list dom)))
+             (eww-bibtex-modify-field-list
+              (or modified-field-list field-list)
+              dom
+              (cdr func-list))))))
+
 (defun eww-bibtex-find-key-for-wikipedia (field-list)
   (let ((url (car (last (assoc "url" field-list)))))
     (if (string-match-p "wikipedia" url)
@@ -114,13 +163,37 @@ select all BibTeX files in it.")
     (if (string-match-p "wikipedia" url)
         (-replace '("author" nil nil) '("author" nil "{Wikipedia Contributors}") field-list))))
 
+(defun eww-bibtex-replace-autokey (field-list autokey)
+  (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions field-list)
+      autokey))
+
+(defun eww-bibtex--query (dom selectors)
+  (flatten-list (mapcar (lambda (selector)
+                          (-difference
+                           (--> selector
+                                (esxml-query-all it dom)
+                                (flatten-tree it)
+                                (-filter #'stringp it))
+                           (--> selector
+                                (esxml-parse-css-selector selector)
+                                (flatten-tree it)
+                                (-filter #'stringp it))))
+                        selectors)))
+
+
 ;;;###autoload
 (defun eww-bibtex (html-source &optional interactive)
   "Alter the \"Misc\" entry in `bibtex-BibTeX-entry-alist' based on
-`eww-bibtex-field-alist'.
+`eww-bibtex--build-field-list-functions'.
+
+Then modify the field list with `eww-bibtex-modify-field-list-functions'.
+
+And when user don't explicitly state the key of the entry, overrides
+the auto-generated key from `bibtex-clean-entry' with `eww-bibtex-find-ref-key-functions'
+
 
 This function works by replacing the initial content of all the fields
-in the \"Misc\" entry defined `eww-bibtex-field-alist'.
+in the \"Misc\" entry.
 
 For example, here is the default \"Misc\" entry type,
 
@@ -144,11 +217,8 @@ We focus on modifying the field alist which is,
 Each of these elements is in the form of (FIELD COMMENT INIT ALTERNATIVE).
 
 The function will replace or append the INIT argument, which dictates
-the initial content of the field, based on `eww-bibtex-field-alist'.
-
-Take the \"note\" field, then replace its INIT argument with the result
-of `eww-bibtex-get-note' created automatically by
-`eww-bibtex-update-field-alist'."
+the initial content of the field via `eww-bibtex--build-field-list'."
+  
   (interactive (list (plist-get eww-data :source) t) eww-mode)
   (let* ((misc-entry (assoc "Misc" bibtex-BibTeX-entry-alist))
          (dom (with-temp-buffer
@@ -156,10 +226,10 @@ of `eww-bibtex-get-note' created automatically by
                 (libxml-parse-html-region
                  (point-min)
                  (point-max))))
-         (field-list (eww-bibtex-build-field-list
-                               (cl-fifth misc-entry)
-                               dom
-                               eww-bibtex-build-field-list-functions))
+         (field-list (eww-bibtex--build-field-list
+                      (cl-fifth misc-entry)
+                      dom
+                      eww-bibtex--build-field-list-functions))
          (target-files (flatten-tree (--map
                                       (if (file-directory-p it)
                                           (directory-files-recursively it ".bib")
@@ -182,21 +252,5 @@ of `eww-bibtex-get-note' created automatically by
       (when (yes-or-no-p "Is the entry correct? ")
         (bibtex-clean-entry)))))
 
-(defun eww-bibtex-replace-autokey (field-list autokey)
-  (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions field-list)
-      autokey))
-
-(defun eww-bibtex--query (dom selectors)
-  (flatten-list (mapcar (lambda (selector)
-                          (-difference
-                           (--> selector
-                                (esxml-query-all it dom)
-                                (flatten-tree it)
-                                (-filter #'stringp it))
-                           (--> selector
-                                (esxml-parse-css-selector selector)
-                                (flatten-tree it)
-                                (-filter #'stringp it))))
-                        selectors)))
 (provide 'eww-bibtex)
 ;;; eww-bibtex.el ends here

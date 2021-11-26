@@ -126,10 +126,13 @@ and the DOM should be given by `eww-bibtex'."
                             ;; VALUE is the string from having user select one of the strings inside VALUE-LIST
                             (car value-list)
                             ;; If VALUE-LIST have one string, use it without asking user.  
-                            )))
+                            ))
+                   (field-elt (--find (equal (car it) field-name) field-list))
+                   ;; Find a field with FIELD-NAME as its name in FIELD-LIST
+                   )
 
               ;; Is there any field with our FIELD-NAME inside the FIELD-LIST?
-              (if (--find (equal (car it) field-name) field-list)
+              (if field-elt
                   ;; Yes, there is a field with our FIELD-NAME.
                   ;; Replace that field's INIT (short for INITial content) with our VALUE.
                   (-replace field-elt `(,field-name nil ,value) field-list)

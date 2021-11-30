@@ -52,6 +52,7 @@ Note: This list shouldn't be modified unless you want to add another
 field to the \"Misc\" entry like \"file\" or \"editor\", and their
 fuctions should have the namespace of eww-bibtex-get-FIELD_NAME") 
 
+;;;###autoload
 (defun eww-bibtex-get-author (dom)
   (eww-bibtex--query dom
                      '("meta[name=author]"
@@ -62,6 +63,7 @@ fuctions should have the namespace of eww-bibtex-get-FIELD_NAME")
                        "[itemprop=author]"
                        ".author")))
 
+;;;###autoload
 (defun eww-bibtex-get-title (dom)
   (let ((title (cl-caddr
                 (car (dom-by-tag dom 'title)))))
@@ -72,11 +74,13 @@ fuctions should have the namespace of eww-bibtex-get-FIELD_NAME")
        (s-trim)
        (s-collapse-whitespace)))))
 
+;;;###autoload
 (defun eww-bibtex-get-url (dom)
   (append (eww-bibtex--query dom '("link[rel=canonical]"
                                    "meta[name=citation_fulltext_html_url]"))
           (list (eww-current-url))))
 
+;;;###autoload
 (defun eww-bibtex-get-year (dom)
   (append (eww-bibtex--query dom
                              '("meta[name=citation_publication_date]"
@@ -91,8 +95,10 @@ fuctions should have the namespace of eww-bibtex-get-FIELD_NAME")
                                "time"))
           (list (format-time-string "%Y"))))
 
-(defun eww-bibtex-get-note (field-list _dom)
+;;;###autoload
+(defun eww-bibtex-get-note (_dom)
   (format "[Online; accessed %s]" (format-time-string "%F")))
+
 
 
 (defun eww-bibtex--build-field-list (field-list dom func-list)

@@ -77,8 +77,8 @@ fuctions should have the namespace of eww-bibtex-get-FIELD_NAME")
 ;;;###autoload
 (defun eww-bibtex-get-url (dom)
   (append (eww-bibtex--query dom '("link[rel=canonical]"
-                                   "meta[name=citation_fulltext_html_url]"))
-          (list (eww-current-url))))
+                                    "meta[name=citation_fulltext_html_url]"))
+           (list (eww-current-url))))
 
 ;;;###autoload
 (defun eww-bibtex-get-year (dom)
@@ -165,7 +165,7 @@ and the DOM should be given by `eww-bibtex'."
 (defun eww-bibtex-find-key-for-wikipedia (field-list)
   (let ((url (car (last (assoc "url" field-list)))))
     (if (string-match-p "wikipedia" url)
-        (concat "wiki:" (file-name-base url)))))
+        (concat "wiki:" (url-unhex-string (file-name-base url))))))
 
 (defun eww-bibtex-find-author-for-wikipedia (field-list _dom)
   (when-let ((url (car (last (assoc "url" field-list)))))

@@ -61,6 +61,7 @@ fuctions should have the namespace of eww-bibtex-get-FIELD_NAME")
                        "[rel=author]"
                        "[itemprop=author] > *"
                        "[itemprop=author]"
+                       "meta[name=twitter:creator]"
                        ".author")))
 
 ;;;###autoload

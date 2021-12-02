@@ -172,6 +172,11 @@ and the DOM should be given by `eww-bibtex'."
     (if (string-match-p "wikipedia" url)
         (-replace '("author" nil nil) '("author" nil "{Wikipedia Contributors}") field-list))))
 
+(defun eww-bibtex-find-title-for-wikipedia (field-list _dom)
+  (let ((url (car (last (assoc "url" field-list)))))
+    (when (string-match-p "wikipedia" url)
+      (-replace (assoc "title" field-list) `("title" nil ,(url-unhex-string (file-name-base url)))))))
+
 (defun eww-bibtex-replace-autokey (field-list autokey)
   (or (run-hook-with-args-until-success 'eww-bibtex-find-ref-key-functions field-list)
       autokey))
@@ -228,7 +233,7 @@ Each of these elements is in the form of (FIELD COMMENT INIT ALTERNATIVE).
 The function will replace or append the INIT argument, which dictates
 the initial content of the field via `eww-bibtex--build-field-list'."
   
-  (interactive (list (plist-get eww-data :source) t) eww-mode)
+  (interactive (list (plist-get eww-data :source)))
   (let* ((misc-entry (assoc "Misc" bibtex-BibTeX-entry-alist))
          (dom (with-temp-buffer
                 (insert html-source)
